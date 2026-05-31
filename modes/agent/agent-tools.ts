@@ -81,6 +81,7 @@ export function createAgentTools(executor: ToolExecutor) {
             }),
             execute: async ({ path: p }) => executor.analyzeCodebase(p),
         }),
+        
         execute_shell: tool({
             description:
                 "Queue a shell command to run in the workspace after user approval. Use with care.",
