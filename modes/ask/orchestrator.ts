@@ -8,6 +8,7 @@ import { ToolExecutor } from "../agent/tool-executor.ts";
 import { defaultAgentConfig } from "../agent/types.ts";
 import { renderTerminalMarkdown, } from "../../tui/terminal-md.ts";
 import { runApprovalFlow } from "../agent/approval.ts";
+import  { createWebTools } from "../plan/webtool.ts";
 
 
 
@@ -95,9 +96,10 @@ export async function runAskMode() {
     const tracker = new actionTracker();
     const executor = new ToolExecutor(tracker, config);
 
-    // TODO: web-search tool (firecrawl)
+
     const tools = {
         ...createAskTools(executor),
+        ...createWebTools(tracker)
 
     }
 

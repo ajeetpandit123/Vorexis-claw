@@ -15,6 +15,7 @@ import { actionTracker } from "../agent/action-tracker.ts";
 import { ToolExecutor } from "../agent/tool-executor.ts";
 import { defaultAgentConfig } from "../agent/types.ts";
 import type { PlanStep, Plan } from "./types.ts";
+import { createWebTools } from "./webtool.ts";
 
 
 const PlanSchema = z.object({

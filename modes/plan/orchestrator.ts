@@ -12,6 +12,7 @@ import { createAgentTools } from "../agent/agent-tools.ts";
 import { printPlan, selectSteps } from "./selection.ts";
 import { generatePlan } from "./planner.ts";
 import type { Plan, PlanStep } from "./types.ts";
+import { createWebTools } from "./webtool.ts";
 
 
 function stepPrompt(goal: string, step: PlanStep): string {
@@ -49,7 +50,8 @@ export async function runPlanMode(): Promise<void> {
   const executor = new ToolExecutor(tracker, config);
   const tools = {
     // Add web tools if available
-    ...createAgentTools(executor)
+     ...createAgentTools(executor),
+    ...createWebTools(tracker)
   }
 
   for (const step of selected) {
