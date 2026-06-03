@@ -118,6 +118,12 @@ export async function runAskMode() {
         message: "save this answer  to  a .md file in the current directory ?",
         initialValue: false,
     });
+   
+
+    if (isCancel(wantsSave) || !wantsSave) {
+    console.log(chalk.green("\n✅ Done.\n"));
+    return;
+}
 
     const filename = await text({
         message: "Enter filename (relative to current directory)",
@@ -138,6 +144,7 @@ export async function runAskMode() {
 
   executor.applyApprovedFromTracker();
   executor.clearStaging();
+  console.log(chalk.green("\n✅ Answer saved successfully.\n"));
 
 }
 
