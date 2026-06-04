@@ -2,7 +2,7 @@ import { Telegraf } from "telegraf";
 import chalk from "chalk";
 import { WELCOME } from "./constants";
 import { resolve } from "node:dns";
-import { registerHandler } from "./handlers";
+import { registerHandlers } from "../telegram/handlers.ts";
 
 
 export async  function runTelegramMode(){
@@ -11,7 +11,7 @@ export async  function runTelegramMode(){
 
    const bot  = new Telegraf(token!)
 
-   registerHandler(bot)
+   registerHandlers(bot)
 
    await bot.telegram.sendMessage(ownerId!,WELCOME,{parse_mode:"Markdown"})
 console.log(chalk.green('sent a welcome message to Telegram.\n'));
