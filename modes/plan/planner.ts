@@ -145,6 +145,7 @@ export async function generatePlan(goal: string) {
     system: PLAN_INSTRUCTIONS(config.codebasePath, hasWeb, minSteps),
     prompt: `User goal: \n${goal}`,
     output: Output.object({ schema: PlanSchema }),
+    maxOutputTokens: 4000,
   });
 
   const validated = PlanSchema.parse(result.output);

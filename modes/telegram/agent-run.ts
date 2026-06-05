@@ -24,6 +24,7 @@ function agentOptions(config: AgentConfig, maxSteps: number) {
     model: getAgentModel(),
     stopWhen: stepCountIs(maxSteps),
     instructions: `Workspace root: ${config.codebasePath}`,
+    maxOutputTokens: 4000,
   };
 }
 

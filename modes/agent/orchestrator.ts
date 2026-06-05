@@ -8,10 +8,17 @@ import { stepCountIs, ToolLoopAgent } from 'ai';
 import { getAgentModel } from '../../AI/index.ts';
 import { renderTerminalMarkdown } from '../../tui/terminal-md.ts';
 import { runApprovalFlow } from './approval.ts';
+import { loadConfig } from '../../config/config.ts';
 
 
 
 export async function runAgentMode() {
+  const apiKey = process.env.OPENROUTER_API_KEY ?? loadConfig().openrouterApiKey;
+  if (!apiKey) {
+    console.log("No OpenRouter API key configured.\n\nRun:\nvorexis-claw login");
+    process.exit(0);
+  }
+
   console.log(chalk.green("Starting agent mode..."));
 
 
@@ -40,8 +47,7 @@ export async function runAgentMode() {
       `All mutation are staged untill approval`
     ].join("\n"),
     tools,
-
-
+    maxOutputTokens: 4000,
   });
 
   const result = await agent.generate({

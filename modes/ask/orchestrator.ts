@@ -3,12 +3,13 @@ import { confirm, isCancel, text } from "@clack/prompts";
 import { ToolLoopAgent, stepCountIs, tool } from "ai"
 import { z } from "zod"
 import { getAgentModel } from "../../AI/ai.config.ts";
+import { loadConfig } from "../../config/config.ts";
 import { actionTracker } from "../agent/action-tracker.ts";
 import { ToolExecutor } from "../agent/tool-executor.ts";
 import { defaultAgentConfig } from "../agent/types.ts";
 import { renderTerminalMarkdown, } from "../../tui/terminal-md.ts";
 import { runApprovalFlow } from "../agent/approval.ts";
-import  { createWebTools } from "../plan/webtool.ts";
+import { createWebTools } from "../plan/webtool.ts";
 
 
 
@@ -79,6 +80,12 @@ function asMd(question: string, answer: string): string {
 }
 
 export async function runAskMode() {
+    const apiKey = process.env.OPENROUTER_API_KEY ?? loadConfig().openrouterApiKey;
+    if (!apiKey) {
+        console.log("No OpenRouter API key configured.\n\nRun:\nvorexis-claw login");
+        process.exit(0);
+    }
+
     console.log(chalk.green("\n❓ Ask Mode\n"));
 
     const Question = await text({ message: "What question do you have about this codebase?", placeholder: "Ask anything about the codebase..." });
@@ -106,7 +113,8 @@ export async function runAskMode() {
     const agent = new ToolLoopAgent({
         model: getAgentModel(),
         stopWhen: stepCountIs(20),
-        tools
+        tools,
+        maxOutputTokens: 4000,
     });
 
     const result = await agent.generate({ prompt: Question.trim() });

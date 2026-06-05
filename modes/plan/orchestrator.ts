@@ -3,6 +3,7 @@ import { confirm, isCancel, text } from "@clack/prompts";
 import { ToolLoopAgent, stepCountIs, tool } from "ai"
 
 import { getAgentModel } from "../../AI/ai.config.ts";
+import { loadConfig } from "../../config/config.ts";
 import { actionTracker } from "../agent/action-tracker.ts";
 import { ToolExecutor } from "../agent/tool-executor.ts";
 import { defaultAgentConfig } from "../agent/types.ts";
@@ -21,6 +22,11 @@ function stepPrompt(goal: string, step: PlanStep): string {
 
 
 export async function runPlanMode(): Promise<void> {
+  const apiKey = process.env.OPENROUTER_API_KEY ?? loadConfig().openrouterApiKey;
+  if (!apiKey) {
+    console.log("No OpenRouter API key configured.\n\nRun:\nvorexis-claw login");
+    process.exit(0);
+  }
 
   console.log(chalk.green("Starting plan mode..."));
 
@@ -61,7 +67,8 @@ export async function runPlanMode(): Promise<void> {
     const agent = new ToolLoopAgent({
       model: getAgentModel(),
       stopWhen: stepCountIs(20),
-      tools
+      tools,
+      maxOutputTokens: 4000,
     });
 
     const result = await agent.generate({
