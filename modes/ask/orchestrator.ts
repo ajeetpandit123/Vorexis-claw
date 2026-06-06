@@ -3,7 +3,7 @@ import { confirm, isCancel, text } from "@clack/prompts";
 import { ToolLoopAgent, stepCountIs, tool } from "ai"
 import { z } from "zod"
 import { getAgentModel } from "../../AI/ai.config.ts";
-import { loadConfig } from "../../config/config.ts";
+import { loadConfig, showOnboardingError, resolveApiKey } from "../../config/config.ts";
 import { actionTracker } from "../agent/action-tracker.ts";
 import { ToolExecutor } from "../agent/tool-executor.ts";
 import { defaultAgentConfig } from "../agent/types.ts";
@@ -80,9 +80,9 @@ function asMd(question: string, answer: string): string {
 }
 
 export async function runAskMode() {
-    const apiKey = process.env.OPENROUTER_API_KEY ?? loadConfig().openrouterApiKey;
+    const apiKey = resolveApiKey();
     if (!apiKey) {
-        console.log("No OpenRouter API key configured.\n\nRun:\nvorexis-claw login");
+        showOnboardingError();
         process.exit(0);
     }
 

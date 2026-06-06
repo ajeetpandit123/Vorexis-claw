@@ -2,7 +2,7 @@
 
 import { Command } from "commander";
 import { runWakeup } from "./tui/wakeup";
-import { ensureConfigDir, loadConfig, saveConfig, deleteConfig } from "./config/config.ts";
+import { ensureConfigDir, loadConfig, saveConfig, deleteConfig, resolveApiKey } from "./config/config.ts";
 import { password, isCancel } from "@clack/prompts";
 import chalk from "chalk";
 
@@ -56,11 +56,12 @@ program
   .command("whoami")
   .description("Check OpenRouter API key configuration status")
   .action(() => {
-    const apiKey = process.env.OPENROUTER_API_KEY ?? loadConfig().openrouterApiKey;
+    const apiKey = resolveApiKey();
+    console.log("Provider: OpenRouter");
     if (apiKey && apiKey.trim() !== "") {
-      console.log("Configured ✅");
+      console.log("API Key: Configured ✅");
     } else {
-      console.log("Not Configured ❌");
+      console.log("API Key: Not Configured ❌");
     }
   });
 

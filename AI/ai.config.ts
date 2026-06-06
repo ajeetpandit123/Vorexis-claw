@@ -1,10 +1,10 @@
 import { createOpenRouter } from "@openrouter/ai-sdk-provider";
-import { loadConfig } from "../config/config.ts";
+import { loadConfig, showOnboardingError, resolveApiKey } from "../config/config.ts";
 
 export function getAgentModel() {
-  const apiKey = process.env.OPENROUTER_API_KEY ?? loadConfig().openrouterApiKey;
+  const apiKey = resolveApiKey();
   if (!apiKey) {
-    console.log("No OpenRouter API key configured.\n\nRun:\nvorexis-claw login");
+    showOnboardingError();
     process.exit(0);
   }
 

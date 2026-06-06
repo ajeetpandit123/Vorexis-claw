@@ -8,14 +8,14 @@ import { stepCountIs, ToolLoopAgent } from 'ai';
 import { getAgentModel } from '../../AI/index.ts';
 import { renderTerminalMarkdown } from '../../tui/terminal-md.ts';
 import { runApprovalFlow } from './approval.ts';
-import { loadConfig } from '../../config/config.ts';
+import { loadConfig, showOnboardingError, resolveApiKey } from '../../config/config.ts';
 
 
 
 export async function runAgentMode() {
-  const apiKey = process.env.OPENROUTER_API_KEY ?? loadConfig().openrouterApiKey;
+  const apiKey = resolveApiKey();
   if (!apiKey) {
-    console.log("No OpenRouter API key configured.\n\nRun:\nvorexis-claw login");
+    showOnboardingError();
     process.exit(0);
   }
 

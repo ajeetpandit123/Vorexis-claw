@@ -3,7 +3,7 @@ import { confirm, isCancel, text } from "@clack/prompts";
 import { ToolLoopAgent, stepCountIs, tool } from "ai"
 
 import { getAgentModel } from "../../AI/ai.config.ts";
-import { loadConfig } from "../../config/config.ts";
+import { loadConfig, showOnboardingError, resolveApiKey } from "../../config/config.ts";
 import { actionTracker } from "../agent/action-tracker.ts";
 import { ToolExecutor } from "../agent/tool-executor.ts";
 import { defaultAgentConfig } from "../agent/types.ts";
@@ -22,9 +22,9 @@ function stepPrompt(goal: string, step: PlanStep): string {
 
 
 export async function runPlanMode(): Promise<void> {
-  const apiKey = process.env.OPENROUTER_API_KEY ?? loadConfig().openrouterApiKey;
+  const apiKey = resolveApiKey();
   if (!apiKey) {
-    console.log("No OpenRouter API key configured.\n\nRun:\nvorexis-claw login");
+    showOnboardingError();
     process.exit(0);
   }
 
