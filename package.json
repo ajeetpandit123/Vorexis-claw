@@ -26,6 +26,7 @@
     "chalk": "^5.6.2",
     "commander": "^14.0.3",
     "diff": "^9.0.0",
+    "edge-tts-universal": "^1.4.0",
     "figlet": "^1.11.0",
     "marked": "^18.0.4",
     "marked-terminal": "^7.3.0",

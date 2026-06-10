@@ -70,17 +70,16 @@ function groupPending(pending: ActionLog[]): ReviewGroup[] {
 export async function runApprovalFlow(tracker: actionTracker): Promise<boolean> {
    const pending = tracker.getPendingMutations();
    if (pending.length === 0) {
-      console.log(chalk.green("\n mo stagaed  file , or shell chnages to review\n"));
+      console.log(chalk.green("\n No staged files, or shell changes to review\n"));
       return false;
    }
 
    const choice = await select({
-      message: "Apply staged changes ?",
+      message: "Apply staged changes?",
       options: [
-         { value: "all", label: "approve and apply all changes" },
-         { value: "select", label: "review individual changes" },
-         { value: "cancel", label: "cancel " }
-
+         { value: "all", label: "Approve and apply all changes" },
+         { value: "select", label: "Review individual changes" },
+         { value: "cancel", label: "Cancel" }
       ]
    });
 

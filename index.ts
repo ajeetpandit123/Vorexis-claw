@@ -2,7 +2,8 @@
 
 import { Command } from "commander";
 import { runWakeup } from "./tui/wakeup";
-import { ensureConfigDir, loadConfig, saveConfig, deleteConfig, resolveApiKey } from "./config/config.ts";
+import { ensureConfigDir, loadConfig, saveConfig, deleteConfig, resolveApiKey, runSettingsFlow } from "./config/config.ts";
+import { runVoiceMode } from "./modes/voice/orchestrator";
 import { password, isCancel } from "@clack/prompts";
 import chalk from "chalk";
 
@@ -20,6 +21,20 @@ program
   .description("A self-evolving command intelligence that awakens systems, binds workflows, and turns intent into execution.")
   .action(async () => {
     await runWakeup();
+  });
+
+program
+  .command("voice")
+  .description("Start Voice Mode for hands-free interactions")
+  .action(async () => {
+    await runVoiceMode();
+  });
+
+program
+  .command("settings")
+  .description("Configure voice and other settings")
+  .action(async () => {
+    await runSettingsFlow();
   });
 
 program

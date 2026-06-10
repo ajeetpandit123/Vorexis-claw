@@ -21,6 +21,79 @@ function stepPrompt(goal: string, step: PlanStep): string {
 }
 
 
+export async function runPlan(
+  goal: string,
+  confirmStepFn?: (numSteps: number) => Promise<boolean>
+): Promise<string> {
+  const plan = await generatePlan(goal);
+  printPlan(plan);
+
+  const selected = plan.steps;
+  if (selected.length === 0) return "No steps generated in the plan.";
+
+  let proceed = true;
+  if (confirmStepFn) {
+    proceed = await confirmStepFn(selected.length);
+  } else {
+    const res = await confirm({
+      message: `You have selected ${selected.length} step(s). Do you want to proceed with executing them?`,
+      initialValue: true,
+    });
+    proceed = !isCancel(res) && res;
+  }
+
+  if (!proceed) return "Plan execution cancelled.";
+
+  const config = defaultAgentConfig();
+  const tracker = new actionTracker();
+  const executor = new ToolExecutor(tracker, config);
+  const tools = {
+    ...createAgentTools(executor),
+    ...createWebTools(tracker)
+  };
+
+  let summary = "";
+  for (const step of selected) {
+    console.log(chalk.cyan(`\n🚀 Executing step: ${step.title}\n`));
+
+    const agent = new ToolLoopAgent({
+      model: getAgentModel(),
+      stopWhen: stepCountIs(20),
+      tools,
+      maxOutputTokens: 4000,
+    });
+
+    const result = await agent.generate({
+      prompt: stepPrompt(plan.goal, step),
+    });
+
+    if (result.text?.trim()) {
+      console.log(chalk.green(`\n✅ Completed step: ${step.title}\n`));
+      console.log(renderTerminalMarkdown(result.text));
+      summary += `\n### Step: ${step.title}\n${result.text}\n`;
+    }
+  }
+
+  const ok = await runApprovalFlow(tracker);
+  if (!ok) {
+    executor.clearStaging();
+    return summary + "\nChanges were discarded.";
+  }
+
+  const { errors } = executor.applyApprovedFromTracker();
+  if (errors.length) {
+    let errStr = '\nSome operations reported errors:\n';
+    for (const e of errors) errStr += `  • ${e}\n`;
+    console.log(chalk.red(errStr));
+    summary += errStr;
+  } else {
+    console.log(chalk.green('\n✓ Applied.\n'));
+    summary += "\n✓ Applied all changes successfully.\n";
+  }
+  executor.clearStaging();
+  return summary;
+}
+
 export async function runPlanMode(): Promise<void> {
   const apiKey = resolveApiKey();
   if (!apiKey) {
@@ -32,37 +105,33 @@ export async function runPlanMode(): Promise<void> {
 
   const goal = await text({
     message: "What would you like to achieve?",
-
-  })
+  });
 
   if (isCancel(goal) || !goal.trim()) return;
 
   const plan = await generatePlan(goal);
-
-
   printPlan(plan);
 
   const selected = await selectSteps(plan);
   if (selected.length === 0) return;
 
-
   const proceed = await confirm({
     message: `You have selected ${selected.length} step(s). Do you want to proceed with executing them ?`,
     initialValue: true,
-  })
+  });
+
+  if (isCancel(proceed) || !proceed) return;
 
   const config = defaultAgentConfig();
   const tracker = new actionTracker();
   const executor = new ToolExecutor(tracker, config);
   const tools = {
-    // Add web tools if available
-     ...createAgentTools(executor),
+    ...createAgentTools(executor),
     ...createWebTools(tracker)
-  }
+  };
 
   for (const step of selected) {
     console.log(chalk.cyan(`\n🚀 Executing step: ${step.title}\n`));
-
 
     const agent = new ToolLoopAgent({
       model: getAgentModel(),
@@ -73,20 +142,12 @@ export async function runPlanMode(): Promise<void> {
 
     const result = await agent.generate({
       prompt: stepPrompt(plan.goal, step),
-    })
+    });
 
     if (result.text?.trim()) {
       console.log(chalk.green(`\n✅ Completed step: ${step.title}\n`));
       console.log(renderTerminalMarkdown(result.text));
     }
-
-
-
-
-
-
-
-
   }
 
   const ok = await runApprovalFlow(tracker);
@@ -103,5 +164,4 @@ export async function runPlanMode(): Promise<void> {
     console.log(chalk.green('\n✓ Applied.\n'));
   }
   executor.clearStaging();
-
 }

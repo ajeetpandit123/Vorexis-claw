@@ -1,39 +1,35 @@
 import chalk from "chalk";
-import{select,isCancel} from "@clack/prompts";
+import { select, isCancel } from "@clack/prompts";
 import { runAgentMode } from "./agent/orchestrator";
 import { runAskMode } from "./ask/orchestrator";
 import { runPlanMode } from "./plan/orchestrator";
+import { runVoiceMode } from "./voice/orchestrator";
 
+export async function runCliMode() {
+  while (true) {
+    const mode = await select({
+      message: "choose CLI sub-mode",
+      options: [
+        { value: "agent", label: "Agent Mode" },
+        { value: "plan", label: "Plan Mode" },
+        { value: "ask", label: "Ask Mode" },
+        { value: "voice", label: "Voice Mode" },
+        { value: "back", label: "Back to Main Menu" }
+      ]
+    });
 
+    if (isCancel(mode) || mode === "back") return;
 
-export async function runCliMode(){
-
-    while(true){
-        const mode = await select({
-            message:"choose CLI sub-mode",
-            options:[
-                {value:"agent",label:"agent Mode"},
-                {value:"plan",label:"plan Mode"},
-                {value:"ask",label:"Ask mode"},
-                {value:"back",label:"Back to main menu"}
-            ]   
-        });
-
-        if(isCancel(mode) || mode === "back") return;
-
-        if(mode === "agent"){
-           await runAgentMode();
-    }
-    if(mode === "plan"){
+    if (mode === "agent") {
+      await runAgentMode();
+    } else if (mode === "plan") {
       await runPlanMode();
-    }       
-    if(mode === "ask"){
-       await runAskMode();
+    } else if (mode === "ask") {
+      await runAskMode();
+    } else if (mode === "voice") {
+      await runVoiceMode();
+    } else {
+      console.log(chalk.red("Invalid mode selected. Please try again."));
     }
-
-    if(mode !== "agent" && mode !== "plan" && mode !== "ask"){
-        console.log(chalk.red("Invalid mode selected. Please try again."));
-    }   
-}
-
+  }
 }

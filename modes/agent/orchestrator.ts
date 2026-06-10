@@ -12,31 +12,13 @@ import { loadConfig, showOnboardingError, resolveApiKey } from '../../config/con
 
 
 
-export async function runAgentMode() {
-  const apiKey = resolveApiKey();
-  if (!apiKey) {
-    showOnboardingError();
-    process.exit(0);
-  }
-
-  console.log(chalk.green("Starting agent mode..."));
-
-
-  const goal = await text({
-    message: "What  would you like the agent to do?",
-    placeholder: "Concrete task for this code base...",
-
-  });
-
-  if (isCancel(goal) || !goal.trim()) return;
-
-
+export async function runAgent(
+  goal: string,
+  approveFn?: () => Promise<boolean>
+): Promise<string> {
   const config = defaultAgentConfig();
-
   const tracker = new actionTracker();
-
   const executor = new ToolExecutor(tracker, config);
-
   const tools = createAgentTools(executor);
 
   const agent = new ToolLoopAgent({
@@ -64,21 +46,51 @@ export async function runAgentMode() {
     },
   });
 
-  if(result.text?.trim()) console.log(renderTerminalMarkdown(result.text));
+  const textOutput = result.text?.trim() || "No agent response generated.";
+  console.log(renderTerminalMarkdown(textOutput));
 
-   const ok = await runApprovalFlow(tracker);
-   if(!ok) return executor.clearStaging();
+  let ok = false;
+  if (approveFn) {
+    ok = await approveFn();
+  } else {
+    ok = await runApprovalFlow(tracker);
+  }
 
-   const { errors } = executor.applyApprovedFromTracker();
+  if (!ok) {
+    executor.clearStaging();
+    return textOutput + "\nChanges were discarded.";
+  }
 
+  const { errors } = executor.applyApprovedFromTracker();
+  let statusStr = "";
   if (errors.length) {
-    console.log(chalk.red("\nSome operations reported errors:\n"));
-    for (const e of errors) console.log(chalk.red(`  • ${e}`));
-  }
-  else{
-   console.log(chalk.green('\n✓ Applied.\n'));
+    statusStr = "\nSome operations reported errors:\n";
+    for (const e of errors) statusStr += `  • ${e}\n`;
+    console.log(chalk.red(statusStr));
+  } else {
+    statusStr = "\n✓ Applied.\n";
+    console.log(chalk.green(statusStr));
   }
 
-  executor.clearStaging()
+  executor.clearStaging();
+  return textOutput + statusStr;
+}
 
+export async function runAgentMode() {
+  const apiKey = resolveApiKey();
+  if (!apiKey) {
+    showOnboardingError();
+    process.exit(0);
+  }
+
+  console.log(chalk.green("Starting agent mode..."));
+
+  const goal = await text({
+    message: "What  would you like the agent to do?",
+    placeholder: "Concrete task for this code base...",
+  });
+
+  if (isCancel(goal) || !goal.trim()) return;
+
+  await runAgent(goal);
 }

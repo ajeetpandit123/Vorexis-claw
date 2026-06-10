@@ -79,6 +79,33 @@ function asMd(question: string, answer: string): string {
   return `# Ask Mode\n\n## Question\n\n${question.trim()}\n\n## Answer\n\n${answer.trim()}\n`;
 }
 
+export async function runAsk(Question: string): Promise<string> {
+    const config = defaultAgentConfig();
+
+    config.tools.allowFileCreation = true;
+    config.tools.allowFileModification = false;
+    config.tools.allowShellExecution = false;
+    config.tools.allowFolderCreation = false;
+
+    const tracker = new actionTracker();
+    const executor = new ToolExecutor(tracker, config);
+
+    const tools = {
+        ...createAskTools(executor),
+        ...createWebTools(tracker)
+    };
+
+    const agent = new ToolLoopAgent({
+        model: getAgentModel(),
+        stopWhen: stepCountIs(20),
+        tools,
+        maxOutputTokens: 4000,
+    });
+
+    const result = await agent.generate({ prompt: Question.trim() });
+    return result.text?.trim() || "No answer generated.";
+}
+
 export async function runAskMode() {
     const apiKey = resolveApiKey();
     if (!apiKey) {
@@ -92,33 +119,7 @@ export async function runAskMode() {
 
     if (isCancel(Question) || !Question.trim()) return;
 
-
-    const config = defaultAgentConfig();
-
-    config.tools.allowFileCreation = true;
-    config.tools.allowFileModification = false;
-    config.tools.allowShellExecution = false;
-    config.tools.allowFolderCreation = false;
-
-    const tracker = new actionTracker();
-    const executor = new ToolExecutor(tracker, config);
-
-
-    const tools = {
-        ...createAskTools(executor),
-        ...createWebTools(tracker)
-
-    }
-
-    const agent = new ToolLoopAgent({
-        model: getAgentModel(),
-        stopWhen: stepCountIs(20),
-        tools,
-        maxOutputTokens: 4000,
-    });
-
-    const result = await agent.generate({ prompt: Question.trim() });
-    const answer = result.text?.trim() || "No answer generated.";
+    const answer = await runAsk(Question);
 
     console.log("\n" + renderTerminalMarkdown(answer) + "\n");
 
@@ -127,11 +128,10 @@ export async function runAskMode() {
         initialValue: false,
     });
    
-
     if (isCancel(wantsSave) || !wantsSave) {
-    console.log(chalk.green("\n✅ Done.\n"));
-    return;
-}
+        console.log(chalk.green("\n✅ Done.\n"));
+        return;
+    }
 
     const filename = await text({
         message: "Enter filename (relative to current directory)",
@@ -142,17 +142,24 @@ export async function runAskMode() {
             if (s.includes('..') || s.includes('/') || s.includes('\\')) return 'No paths';
             if (!s.toLowerCase().endsWith('.md')) return 'Must end with .md';
         },
+    });
+    if(isCancel(filename)) return;
 
-    })
-     if(isCancel(filename)) return;
+    const config = defaultAgentConfig();
+    config.tools.allowFileCreation = true;
+    config.tools.allowFileModification = false;
+    config.tools.allowShellExecution = false;
+    config.tools.allowFolderCreation = false;
 
-  executor.createFile(filename , asMd(Question , answer));
-  const ok = await runApprovalFlow(tracker);
-  if(!ok) return executor.clearStaging();
+    const tracker = new actionTracker();
+    const executor = new ToolExecutor(tracker, config);
 
-  executor.applyApprovedFromTracker();
-  executor.clearStaging();
-  console.log(chalk.green("\n✅ Answer saved successfully.\n"));
+    executor.createFile(filename , asMd(Question , answer));
+    const ok = await runApprovalFlow(tracker);
+    if(!ok) return executor.clearStaging();
 
+    executor.applyApprovedFromTracker();
+    executor.clearStaging();
+    console.log(chalk.green("\n✅ Answer saved successfully.\n"));
 }
 

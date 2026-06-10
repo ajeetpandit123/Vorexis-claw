@@ -48,7 +48,7 @@ export async function runWakeup() {
         message:"Welcome to Vorexis-claw! which mode do you want to start with? ",
         options:[
             {value:"cli",label:"CLI"},
-            {value:"telegram",label:"Telegram "},
+            {value:"telegram",label:"Telegram"},
             {value:"exit",label:"Exit"}
         ],
     
