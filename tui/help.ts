@@ -25,6 +25,12 @@ export function getHelpText(): string {
       chalk.dim("  /context   Full project context"),
       chalk.dim("  /reset     Reset session memory"),
       chalk.dim("  /exit      Exit session"),
+      "",
+      chalk.white("Platform Commands:"),
+      chalk.dim("  vorexis-claw github login|status"),
+      chalk.dim("  vorexis-claw mcp list|connect|status"),
+      chalk.dim("  vorexis-claw provider set ollama"),
+      chalk.dim("  vorexis-claw doctor"),
     ].join("\n"),
     {
       padding: 1,

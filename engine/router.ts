@@ -23,7 +23,7 @@ async function executeIntent(intent: Intent, prompt: string): Promise<string> {
     case "PLAN":
       return runPlan(prompt);
     case "AGENT":
-      return runAgent(prompt);
+      return runAgent(prompt, undefined, { intent });
     case "HELP":
       return "";
   }

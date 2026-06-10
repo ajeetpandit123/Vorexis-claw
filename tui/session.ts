@@ -1,6 +1,7 @@
 import chalk from "chalk";
 
-import { resolveApiKey, showOnboardingError } from "../config/config.ts";
+import { showOnboardingError } from "../config/config.ts";
+import { hasProviderCredentials } from "../platform/providers/manager.ts";
 import { detectProjectContext, formatProjectContext } from "../core/project-context.ts";
 import { SessionMemory } from "../core/session-memory.ts";
 import { routePrompt } from "../engine/router.ts";
@@ -67,7 +68,7 @@ function handleSlashCommand(
 }
 
 export async function runSession(): Promise<void> {
-  if (!resolveApiKey()) {
+  if (!hasProviderCredentials()) {
     showOnboardingError();
     return;
   }

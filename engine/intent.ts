@@ -10,7 +10,10 @@ const READ_PATTERNS =
   /\b(read|inside|contents of|what's in|what is in|look at|open|summarize)\b/i;
 
 const AGENT_PATTERNS =
-  /\b(build|create|implement|fix|refactor|add|generate|write|develop|deploy|install|update|modify|edit|delete|remove|migrate|setup|configure|scaffold|integrate|convert|rename|move)\b/i;
+  /\b(build|create|implement|fix|refactor|add|generate|write|develop|deploy|install|update|modify|edit|delete|remove|migrate|setup|configure|scaffold|integrate|convert|rename|move|pull request|issue #|fix issue|open pr|create pr)\b/i;
+
+const GITHUB_PATTERNS =
+  /\b(pull request|pull requests|github issue|fix issue|open pr|create pr|review pr|merge request)\b/i;
 
 export function detectIntent(prompt: string): Intent {
   const trimmed = prompt.trim();
@@ -19,6 +22,7 @@ export function detectIntent(prompt: string): Intent {
   if (!trimmed) return "HELP";
   if (lower === "help" || lower === "--help" || lower === "/help") return "HELP";
 
+  if (GITHUB_PATTERNS.test(lower)) return "AGENT";
   if (PLAN_PATTERNS.test(lower)) return "PLAN";
   if (trimmed.endsWith("?") || ASK_PATTERNS.test(lower) || READ_PATTERNS.test(lower)) {
     return "ASK";

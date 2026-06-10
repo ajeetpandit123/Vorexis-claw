@@ -9,6 +9,15 @@ export interface VorexisConfig {
   provider?: string;
   apiKey?: string;
   openrouterApiKey?: string;
+  modelProvider?: "openrouter" | "openai" | "anthropic" | "google" | "ollama" | "lmstudio";
+  modelName?: string;
+  autoModelRouting?: boolean;
+  fallbackModel?: string;
+  ollamaBaseUrl?: string;
+  lmstudioBaseUrl?: string;
+  githubToken?: string;
+  anthropicApiKey?: string;
+  googleApiKey?: string;
   voiceEnabled?: boolean;
   speechToTextProvider?: "whisper" | "deepgram" | "assemblyai" | "whisper.cpp";
   textToSpeechProvider?: "edge-tts" | "openai" | "elevenlabs" | "azure" | "none";
@@ -106,10 +115,10 @@ export function showOnboardingError(): void {
 
   console.log();
   console.log(chalk.hex("#5b4d9e")(`┌${"─".repeat(56)}┐`));
-  console.log(formatLine("  [!] No OpenRouter API key configured.", chalk.hex("#ff9e3b").bold));
+  console.log(formatLine("  [!] No model provider configured.", chalk.hex("#ff9e3b").bold));
   console.log(formatLine(""));
-  console.log(formatLine("  Please run:"));
-  console.log(formatLine(`  vorexis-claw login`, chalk.hex("#e8dcf8").bold));
+  console.log(formatLine("  Cloud:  vorexis-claw login"));
+  console.log(formatLine("  Local:  vorexis-claw provider set ollama", chalk.hex("#e8dcf8").bold));
   console.log(formatLine(""));
   console.log(formatLine("  (Copied to clipboard! Just paste and run)", chalk.dim));
   console.log(chalk.hex("#5b4d9e")(`└${"─".repeat(56)}┘`));

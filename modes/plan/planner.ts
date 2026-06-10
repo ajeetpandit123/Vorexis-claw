@@ -127,7 +127,7 @@ export async function generatePlan(goal: string) {
   const minSteps = inferMinimumSteps(goal);
   const PlanSchema = createPlanSchema(minSteps);
   const model = wrapLanguageModel({
-    model: getAgentModel(),
+    model: getAgentModel({ prompt: goal, intent: "PLAN" }),
     middleware: extractJsonMiddleware(),
   });
 

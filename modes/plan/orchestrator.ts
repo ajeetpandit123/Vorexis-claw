@@ -3,6 +3,7 @@ import { confirm, isCancel } from "@clack/prompts";
 import { ToolLoopAgent, stepCountIs, tool } from "ai"
 
 import { getAgentModel } from "../../AI/ai.config.ts";
+import { createPlatformTools } from "../../platform/tools.ts";
 import { actionTracker } from "../agent/action-tracker.ts";
 import { ToolExecutor } from "../agent/tool-executor.ts";
 import { defaultAgentConfig } from "../agent/types.ts";
@@ -46,9 +47,11 @@ export async function runPlan(
   const config = defaultAgentConfig();
   const tracker = new actionTracker();
   const executor = new ToolExecutor(tracker, config);
+  const platformTools = await createPlatformTools();
   const tools = {
     ...createAgentTools(executor),
-    ...createWebTools(tracker)
+    ...createWebTools(tracker),
+    ...platformTools,
   };
 
   let summary = "";
@@ -56,7 +59,7 @@ export async function runPlan(
     console.log(chalk.cyan(`\n🚀 Executing step: ${step.title}\n`));
 
     const agent = new ToolLoopAgent({
-      model: getAgentModel(),
+      model: getAgentModel({ prompt: goal, intent: "PLAN" }),
       stopWhen: stepCountIs(20),
       tools,
       maxOutputTokens: 4000,

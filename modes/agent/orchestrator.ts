@@ -4,25 +4,39 @@ import { actionTracker } from './action-tracker.ts';
 import { ToolExecutor } from './tool-executor.ts';
 import { createAgentTools } from './agent-tools.ts';
 import { stepCountIs, ToolLoopAgent } from 'ai';
-import { getAgentModel } from '../../AI/index.ts';
+import { getAgentModel, getRoutedModelInfo } from '../../AI/index.ts';
 import { renderTerminalMarkdown } from '../../tui/terminal-md.ts';
 import { runApprovalFlow } from './approval.ts';
+import { createPlatformTools, getPlatformToolSummary } from '../../platform/tools.ts';
+
+export interface AgentRunOptions {
+  intent?: string;
+}
 
 export async function runAgent(
   goal: string,
-  approveFn?: () => Promise<boolean>
+  approveFn?: () => Promise<boolean>,
+  options: AgentRunOptions = {}
 ): Promise<string> {
   const config = defaultAgentConfig();
   const tracker = new actionTracker();
   const executor = new ToolExecutor(tracker, config);
-  const tools = createAgentTools(executor);
+  const platformTools = await createPlatformTools();
+  const tools = { ...createAgentTools(executor), ...platformTools };
+
+  const route = getRoutedModelInfo({ prompt: goal, intent: options.intent ?? "AGENT" });
+  console.log(chalk.dim(`Model: ${route.model} (${route.reason})`));
 
   const agent = new ToolLoopAgent({
-    model: getAgentModel(),
+    model: getAgentModel({ prompt: goal, intent: options.intent ?? "AGENT" }),
     stopWhen: stepCountIs(40),
     instructions: [
       `workspace root: ${config.codebasePath}`,
-      `All mutation are staged untill approval`
+      `Platform tools: ${getPlatformToolSummary()}`,
+      `Workflow: understand goal → plan approach → select tools → execute → verify → report`,
+      `Use GitHub tools for PRs, issues, branches when the task involves remote repository workflows.`,
+      `Use MCP tools when external systems (database, browser, docker) are required.`,
+      `All file mutations are staged until user approval.`,
     ].join("\n"),
     tools,
     maxOutputTokens: 4000,
