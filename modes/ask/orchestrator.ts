@@ -10,6 +10,7 @@ import { defaultAgentConfig } from "../agent/types.ts";
 import { renderTerminalMarkdown, } from "../../tui/terminal-md.ts";
 import { runApprovalFlow } from "../agent/approval.ts";
 import { createWebTools } from "../plan/webtool.ts";
+import { printVoiceBanner, promptWithVoice } from "../voice/prompt-input.ts";
 
 
 
@@ -114,52 +115,62 @@ export async function runAskMode() {
     }
 
     console.log(chalk.green("\n❓ Ask Mode\n"));
+    printVoiceBanner();
 
-    const Question = await text({ message: "What question do you have about this codebase?", placeholder: "Ask anything about the codebase..." });
+    while (true) {
+        const Question = await promptWithVoice({
+            message: "What question do you have about this codebase?",
+            placeholder: "Ask anything about the codebase...",
+        });
 
-    if (isCancel(Question) || !Question.trim()) return;
+        if (!Question) return;
 
-    const answer = await runAsk(Question);
+        const answer = await runAsk(Question);
 
-    console.log("\n" + renderTerminalMarkdown(answer) + "\n");
+        console.log("\n" + renderTerminalMarkdown(answer) + "\n");
 
-    const wantsSave = await confirm({
-        message: "save this answer  to  a .md file in the current directory ?",
-        initialValue: false,
-    });
-   
-    if (isCancel(wantsSave) || !wantsSave) {
-        console.log(chalk.green("\n✅ Done.\n"));
-        return;
+        const wantsSave = await confirm({
+            message: "save this answer  to  a .md file in the current directory ?",
+            initialValue: false,
+        });
+
+        if (isCancel(wantsSave) || !wantsSave) {
+            console.log(chalk.dim("\nAsk another question, or press Ctrl+C to return to the menu.\n"));
+            continue;
+        }
+
+        const filename = await text({
+            message: "Enter filename (relative to current directory)",
+            initialValue: "ask.md",
+            validate: (v) => {
+                const s = (v ?? '').trim();
+                if (!s) return 'Required';
+                if (s.includes('..') || s.includes('/') || s.includes('\\')) return 'No paths';
+                if (!s.toLowerCase().endsWith('.md')) return 'Must end with .md';
+            },
+        });
+        if (isCancel(filename)) continue;
+
+        const config = defaultAgentConfig();
+        config.tools.allowFileCreation = true;
+        config.tools.allowFileModification = false;
+        config.tools.allowShellExecution = false;
+        config.tools.allowFolderCreation = false;
+
+        const tracker = new actionTracker();
+        const executor = new ToolExecutor(tracker, config);
+
+        executor.createFile(filename, asMd(Question, answer));
+        const ok = await runApprovalFlow(tracker);
+        if (!ok) {
+            executor.clearStaging();
+            continue;
+        }
+
+        executor.applyApprovedFromTracker();
+        executor.clearStaging();
+        console.log(chalk.green("\n✅ Answer saved successfully.\n"));
+        console.log(chalk.dim("Ask another question, or press Ctrl+C to return to the menu.\n"));
     }
-
-    const filename = await text({
-        message: "Enter filename (relative to current directory)",
-        initialValue: "ask.md",
-        validate: (v) => {
-            const s = (v ?? '').trim();
-            if (!s) return 'Required';
-            if (s.includes('..') || s.includes('/') || s.includes('\\')) return 'No paths';
-            if (!s.toLowerCase().endsWith('.md')) return 'Must end with .md';
-        },
-    });
-    if(isCancel(filename)) return;
-
-    const config = defaultAgentConfig();
-    config.tools.allowFileCreation = true;
-    config.tools.allowFileModification = false;
-    config.tools.allowShellExecution = false;
-    config.tools.allowFolderCreation = false;
-
-    const tracker = new actionTracker();
-    const executor = new ToolExecutor(tracker, config);
-
-    executor.createFile(filename , asMd(Question , answer));
-    const ok = await runApprovalFlow(tracker);
-    if(!ok) return executor.clearStaging();
-
-    executor.applyApprovedFromTracker();
-    executor.clearStaging();
-    console.log(chalk.green("\n✅ Answer saved successfully.\n"));
 }
 

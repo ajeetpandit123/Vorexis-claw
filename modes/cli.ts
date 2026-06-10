@@ -3,7 +3,6 @@ import { select, isCancel } from "@clack/prompts";
 import { runAgentMode } from "./agent/orchestrator";
 import { runAskMode } from "./ask/orchestrator";
 import { runPlanMode } from "./plan/orchestrator";
-import { runVoiceMode } from "./voice/orchestrator";
 
 export async function runCliMode() {
   while (true) {
@@ -13,7 +12,6 @@ export async function runCliMode() {
         { value: "agent", label: "Agent Mode" },
         { value: "plan", label: "Plan Mode" },
         { value: "ask", label: "Ask Mode" },
-        { value: "voice", label: "Voice Mode" },
         { value: "back", label: "Back to Main Menu" }
       ]
     });
@@ -26,8 +24,6 @@ export async function runCliMode() {
       await runPlanMode();
     } else if (mode === "ask") {
       await runAskMode();
-    } else if (mode === "voice") {
-      await runVoiceMode();
     } else {
       console.log(chalk.red("Invalid mode selected. Please try again."));
     }

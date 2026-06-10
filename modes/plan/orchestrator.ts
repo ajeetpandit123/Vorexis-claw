@@ -1,5 +1,5 @@
 import chalk from "chalk"
-import { confirm, isCancel, text } from "@clack/prompts";
+import { confirm, isCancel } from "@clack/prompts";
 import { ToolLoopAgent, stepCountIs, tool } from "ai"
 
 import { getAgentModel } from "../../AI/ai.config.ts";
@@ -14,6 +14,7 @@ import { printPlan, selectSteps } from "./selection.ts";
 import { generatePlan } from "./planner.ts";
 import type { Plan, PlanStep } from "./types.ts";
 import { createWebTools } from "./webtool.ts";
+import { printVoiceBanner, promptWithVoice } from "../voice/prompt-input.ts";
 
 
 function stepPrompt(goal: string, step: PlanStep): string {
@@ -101,67 +102,80 @@ export async function runPlanMode(): Promise<void> {
     process.exit(0);
   }
 
-  console.log(chalk.green("Starting plan mode..."));
+  console.log(chalk.green("\n📋 Plan Mode\n"));
+  printVoiceBanner();
 
-  const goal = await text({
-    message: "What would you like to achieve?",
-  });
-
-  if (isCancel(goal) || !goal.trim()) return;
-
-  const plan = await generatePlan(goal);
-  printPlan(plan);
-
-  const selected = await selectSteps(plan);
-  if (selected.length === 0) return;
-
-  const proceed = await confirm({
-    message: `You have selected ${selected.length} step(s). Do you want to proceed with executing them ?`,
-    initialValue: true,
-  });
-
-  if (isCancel(proceed) || !proceed) return;
-
-  const config = defaultAgentConfig();
-  const tracker = new actionTracker();
-  const executor = new ToolExecutor(tracker, config);
-  const tools = {
-    ...createAgentTools(executor),
-    ...createWebTools(tracker)
-  };
-
-  for (const step of selected) {
-    console.log(chalk.cyan(`\n🚀 Executing step: ${step.title}\n`));
-
-    const agent = new ToolLoopAgent({
-      model: getAgentModel(),
-      stopWhen: stepCountIs(20),
-      tools,
-      maxOutputTokens: 4000,
+  while (true) {
+    const goal = await promptWithVoice({
+      message: "What would you like to achieve?",
+      placeholder: "Describe your goal...",
     });
 
-    const result = await agent.generate({
-      prompt: stepPrompt(plan.goal, step),
-    });
+    if (!goal) return;
 
-    if (result.text?.trim()) {
-      console.log(chalk.green(`\n✅ Completed step: ${step.title}\n`));
-      console.log(renderTerminalMarkdown(result.text));
+    const plan = await generatePlan(goal);
+    printPlan(plan);
+
+    const selected = await selectSteps(plan);
+    if (selected.length === 0) {
+      console.log(chalk.dim("\nPlan another goal, or press Ctrl+C to return to the menu.\n"));
+      continue;
     }
-  }
 
-  const ok = await runApprovalFlow(tracker);
+    const proceed = await confirm({
+      message: `You have selected ${selected.length} step(s). Do you want to proceed with executing them ?`,
+      initialValue: true,
+    });
 
-  if (!ok) {
-    return executor.clearStaging();
-  }
+    if (isCancel(proceed) || !proceed) {
+      console.log(chalk.dim("\nPlan another goal, or press Ctrl+C to return to the menu.\n"));
+      continue;
+    }
 
-  const { errors } = executor.applyApprovedFromTracker();
-  if (errors.length) {
-    console.log(chalk.red('\nSome operations reported errors:\n'));
-    for (const e of errors) console.log(chalk.red(`  • ${e}`));
-  } else {
-    console.log(chalk.green('\n✓ Applied.\n'));
+    const config = defaultAgentConfig();
+    const tracker = new actionTracker();
+    const executor = new ToolExecutor(tracker, config);
+    const tools = {
+      ...createAgentTools(executor),
+      ...createWebTools(tracker)
+    };
+
+    for (const step of selected) {
+      console.log(chalk.cyan(`\n🚀 Executing step: ${step.title}\n`));
+
+      const agent = new ToolLoopAgent({
+        model: getAgentModel(),
+        stopWhen: stepCountIs(20),
+        tools,
+        maxOutputTokens: 4000,
+      });
+
+      const result = await agent.generate({
+        prompt: stepPrompt(plan.goal, step),
+      });
+
+      if (result.text?.trim()) {
+        console.log(chalk.green(`\n✅ Completed step: ${step.title}\n`));
+        console.log(renderTerminalMarkdown(result.text));
+      }
+    }
+
+    const ok = await runApprovalFlow(tracker);
+
+    if (!ok) {
+      executor.clearStaging();
+      console.log(chalk.dim("\nPlan another goal, or press Ctrl+C to return to the menu.\n"));
+      continue;
+    }
+
+    const { errors } = executor.applyApprovedFromTracker();
+    if (errors.length) {
+      console.log(chalk.red('\nSome operations reported errors:\n'));
+      for (const e of errors) console.log(chalk.red(`  • ${e}`));
+    } else {
+      console.log(chalk.green('\n✓ Applied.\n'));
+    }
+    executor.clearStaging();
+    console.log(chalk.dim("\nPlan another goal, or press Ctrl+C to return to the menu.\n"));
   }
-  executor.clearStaging();
 }
