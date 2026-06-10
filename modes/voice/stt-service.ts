@@ -35,8 +35,7 @@ export class SttService {
       });
 
       if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`OpenAI Whisper request failed: ${response.status} - ${errText}`);
+        throw new Error(`OpenAI Whisper request failed: ${response.status}`);
       }
 
       const data = await response.json() as { text: string };
@@ -60,8 +59,7 @@ export class SttService {
       });
 
       if (!response.ok) {
-        const errText = await response.text();
-        throw new Error(`Deepgram request failed: ${response.status} - ${errText}`);
+        throw new Error(`Deepgram request failed: ${response.status}`);
       }
 
       const data = await response.json() as any;
@@ -87,8 +85,7 @@ export class SttService {
       });
 
       if (!uploadResponse.ok) {
-        const errText = await uploadResponse.text();
-        throw new Error(`AssemblyAI upload failed: ${uploadResponse.status} - ${errText}`);
+        throw new Error(`AssemblyAI upload failed: ${uploadResponse.status}`);
       }
 
       const uploadData = await uploadResponse.json() as { upload_url: string };
@@ -105,8 +102,7 @@ export class SttService {
       });
 
       if (!transcriptResponse.ok) {
-        const errText = await transcriptResponse.text();
-        throw new Error(`AssemblyAI transcription request failed: ${transcriptResponse.status} - ${errText}`);
+        throw new Error(`AssemblyAI transcription request failed: ${transcriptResponse.status}`);
       }
 
       let transcriptData = await transcriptResponse.json() as { id: string; status: string; text?: string; error?: string };

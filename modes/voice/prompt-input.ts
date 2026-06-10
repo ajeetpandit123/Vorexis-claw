@@ -8,6 +8,7 @@ import { text, isCancel } from "@clack/prompts";
 import { loadConfig } from "../../config/config.ts";
 import { AudioRecorder } from "./audio-recorder.ts";
 import { SttService } from "./stt-service.ts";
+import { friendlyVoiceError, isSilentRecording } from "./voice-errors.ts";
 
 export interface PromptWithVoiceOptions {
   message: string;
@@ -105,31 +106,52 @@ export async function promptWithVoice(
       process.stdout.write(chalk.red("\n🎙 Recording... (ENTER to stop, ESC to cancel)\n"));
       try {
         await recorder.start({ outputPath: tempMicPath });
-      } catch (err: unknown) {
+      } catch {
         isRecording = false;
-        const message = err instanceof Error ? err.message : String(err);
-        process.stdout.write(chalk.red(`\nRecording failed: ${message}\n> `));
+        process.stdout.write(chalk.yellow("\nCould not start recording. Try again or type your prompt.\n> "));
+      }
+    };
+
+    const cleanupMicFile = () => {
+      if (fs.existsSync(tempMicPath)) {
+        try {
+          fs.unlinkSync(tempMicPath);
+        } catch {
+          // Ignore cleanup errors
+        }
       }
     };
 
     const stopAndTranscribe = async (): Promise<string | null> => {
       if (!isRecording) return null;
       isRecording = false;
-      process.stdout.write(chalk.yellow("Transcribing...\n"));
+
       try {
         await recorder.stop();
-        const transcript = await stt.transcribe({ filePath: tempMicPath });
-        if (fs.existsSync(tempMicPath)) {
-          try {
-            fs.unlinkSync(tempMicPath);
-          } catch {
-            // Ignore cleanup errors
-          }
+      } catch {
+        cleanupMicFile();
+        process.stdout.write(chalk.yellow("\nCould not process recording. Try again or type your prompt.\n> "));
+        return null;
+      }
+
+      if (isSilentRecording(tempMicPath)) {
+        cleanupMicFile();
+        process.stdout.write(chalk.dim("\nNo speech detected.\n> "));
+        return null;
+      }
+
+      process.stdout.write(chalk.yellow("Transcribing...\n"));
+      try {
+        const transcript = (await stt.transcribe({ filePath: tempMicPath })).trim();
+        cleanupMicFile();
+        if (!transcript) {
+          process.stdout.write(chalk.dim("\nNo speech detected.\n> "));
+          return null;
         }
-        return transcript.trim() || null;
+        return transcript;
       } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : String(err);
-        process.stdout.write(chalk.red(`\nTranscription failed: ${message}\n> `));
+        cleanupMicFile();
+        process.stdout.write(chalk.yellow(`\n${friendlyVoiceError(err)}\n> `));
         return null;
       }
     };
@@ -153,8 +175,6 @@ export async function promptWithVoice(
           if (transcript) {
             console.log(chalk.hex("#e8dcf8")(`You said: ${chalk.bold(transcript)}`));
             finish(transcript);
-          } else {
-            process.stdout.write(chalk.dim("No speech detected.\n> "));
           }
         }
         return;
