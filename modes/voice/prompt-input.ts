@@ -13,6 +13,8 @@ import { friendlyVoiceError, isSilentRecording } from "./voice-errors.ts";
 export interface PromptWithVoiceOptions {
   message: string;
   placeholder?: string;
+  /** Skip header text on follow-up prompts in the session loop */
+  continuation?: boolean;
 }
 
 export function isVoiceEnabled(): boolean {
@@ -39,9 +41,13 @@ export async function promptWithVoice(
     return result.trim();
   }
 
-  console.log(chalk.bold(options.message));
-  if (options.placeholder) {
-    console.log(chalk.dim(options.placeholder));
+  if (!options.continuation) {
+    if (options.message) {
+      console.log(chalk.bold(options.message));
+    }
+    if (options.placeholder) {
+      console.log(chalk.dim(options.placeholder));
+    }
   }
   process.stdout.write(chalk.dim("> "));
 

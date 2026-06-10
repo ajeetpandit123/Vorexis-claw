@@ -6,6 +6,8 @@ import crypto from "node:crypto";
 import { select, confirm, text as clackText, isCancel } from "@clack/prompts";
 
 export interface VorexisConfig {
+  provider?: string;
+  apiKey?: string;
   openrouterApiKey?: string;
   voiceEnabled?: boolean;
   speechToTextProvider?: "whisper" | "deepgram" | "assemblyai" | "whisper.cpp";
@@ -65,7 +67,12 @@ export function resolveApiKey(): string | undefined {
       envKey = undefined;
     }
   }
-  return envKey ?? loadConfig().openrouterApiKey;
+  const config = loadConfig();
+  return envKey ?? config.apiKey ?? config.openrouterApiKey;
+}
+
+export function getProvider(): string {
+  return loadConfig().provider ?? "openrouter";
 }
 
 export function saveConfig(config: VorexisConfig): void {
@@ -114,7 +121,7 @@ export async function runSettingsFlow() {
   console.log(chalk.hex("#5b4d9e").bold("\n⚙️ Vorexis-Claw Config & Voice Settings\n"));
 
   const voiceEnabled = await confirm({
-    message: "Enable Voice Mode?",
+    message: "Enable voice input?",
     initialValue: currentConfig.voiceEnabled ?? true
   });
   if (isCancel(voiceEnabled)) return;

@@ -7,8 +7,6 @@ import { stepCountIs, ToolLoopAgent } from 'ai';
 import { getAgentModel } from '../../AI/index.ts';
 import { renderTerminalMarkdown } from '../../tui/terminal-md.ts';
 import { runApprovalFlow } from './approval.ts';
-import { showOnboardingError, resolveApiKey } from '../../config/config.ts';
-import { printVoiceBanner, promptWithVoice } from '../voice/prompt-input.ts';
 
 export async function runAgent(
   goal: string,
@@ -72,27 +70,4 @@ export async function runAgent(
 
   executor.clearStaging();
   return textOutput + statusStr;
-}
-
-export async function runAgentMode() {
-  const apiKey = resolveApiKey();
-  if (!apiKey) {
-    showOnboardingError();
-    process.exit(0);
-  }
-
-  console.log(chalk.green("\n🤖 Agent Mode\n"));
-  printVoiceBanner();
-
-  while (true) {
-    const goal = await promptWithVoice({
-      message: "What would you like the agent to do?",
-      placeholder: "Concrete task for this codebase...",
-    });
-
-    if (!goal) return;
-
-    await runAgent(goal);
-    console.log(chalk.dim("\nEnter another task, or press Ctrl+C to return to the menu.\n"));
-  }
 }

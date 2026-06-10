@@ -1,10 +1,21 @@
 #!/usr/bin/env bun
 
 import { Command } from "commander";
-import { runWakeup } from "./tui/wakeup";
-import { ensureConfigDir, loadConfig, saveConfig, deleteConfig, resolveApiKey, runSettingsFlow } from "./config/config.ts";
+import { runWakeup } from "./tui/wakeup.ts";
+import { runSession } from "./tui/session.ts";
+import {
+  ensureConfigDir,
+  loadConfig,
+  saveConfig,
+  deleteConfig,
+  resolveApiKey,
+  getProvider,
+  runSettingsFlow,
+} from "./config/config.ts";
+import { runTelegramMode } from "./modes/telegram/index.ts";
 import { password, isCancel } from "@clack/prompts";
 import chalk from "chalk";
+import { printHelp } from "./tui/help.ts";
 
 ensureConfigDir();
 
@@ -12,14 +23,28 @@ const program = new Command();
 
 program
   .name("vorexis-claw")
-  .description("A self-evolving intelligent core that controls and connects everything.")
-  .version("1.0.0");
+  .description("Autonomous Software Engineer AI — single-prompt interface")
+  .version("2.0.0");
 
 program
-  .command("wakeup")
-  .description("A self-evolving command intelligence that awakens systems, binds workflows, and turns intent into execution.")
+  .command("wakeup", { isDefault: true })
+  .description("Start the Vorexis-Claw AI engineering session")
   .action(async () => {
     await runWakeup();
+  });
+
+program
+  .command("start")
+  .description("Start an interactive session (alias for wakeup)")
+  .action(async () => {
+    await runSession();
+  });
+
+program
+  .command("telegram")
+  .description("Start the Telegram bot interface")
+  .action(async () => {
+    await runTelegramMode();
   });
 
 program
@@ -39,7 +64,7 @@ program
         if (!value || value.trim() === "") {
           return "API Key cannot be empty.";
         }
-      }
+      },
     });
 
     if (isCancel(apiKey)) {
@@ -47,13 +72,19 @@ program
       process.exit(0);
     }
 
-    saveConfig({ openrouterApiKey: apiKey.trim() });
+    const key = apiKey.trim();
+    saveConfig({
+      ...loadConfig(),
+      provider: "openrouter",
+      apiKey: key,
+      openrouterApiKey: key,
+    });
     console.log(chalk.green("Success: API Key saved successfully."));
   });
 
 program
   .command("logout")
-  .description("Remove OpenRouter API key and configuration")
+  .description("Remove credentials and configuration")
   .action(() => {
     deleteConfig();
     console.log(chalk.green("Successfully logged out. Configuration removed."));
@@ -61,10 +92,10 @@ program
 
 program
   .command("whoami")
-  .description("Check OpenRouter API key configuration status")
+  .description("Check API key configuration status")
   .action(() => {
     const apiKey = resolveApiKey();
-    console.log("Provider: OpenRouter");
+    console.log(`Provider: ${getProvider()}`);
     if (apiKey && apiKey.trim() !== "") {
       console.log("API Key: Configured ✅");
     } else {
@@ -72,5 +103,13 @@ program
     }
   });
 
-await program.parseAsync(process.argv);
+program.option("--help", "Show help");
+program.helpOption(false);
+program.addHelpCommand(false);
 
+if (process.argv.includes("--help") || process.argv.includes("-h")) {
+  printHelp();
+  process.exit(0);
+}
+
+await program.parseAsync(process.argv);

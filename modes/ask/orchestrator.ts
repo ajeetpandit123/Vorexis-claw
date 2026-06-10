@@ -1,16 +1,10 @@
-import chalk from "chalk"
-import { confirm, isCancel, text } from "@clack/prompts";
 import { ToolLoopAgent, stepCountIs, tool } from "ai"
 import { z } from "zod"
 import { getAgentModel } from "../../AI/ai.config.ts";
-import { loadConfig, showOnboardingError, resolveApiKey } from "../../config/config.ts";
 import { actionTracker } from "../agent/action-tracker.ts";
 import { ToolExecutor } from "../agent/tool-executor.ts";
 import { defaultAgentConfig } from "../agent/types.ts";
-import { renderTerminalMarkdown, } from "../../tui/terminal-md.ts";
-import { runApprovalFlow } from "../agent/approval.ts";
 import { createWebTools } from "../plan/webtool.ts";
-import { printVoiceBanner, promptWithVoice } from "../voice/prompt-input.ts";
 
 
 
@@ -76,10 +70,6 @@ function createAskTools(executor: ToolExecutor) {
 
 }
 
-function asMd(question: string, answer: string): string {
-  return `# Ask Mode\n\n## Question\n\n${question.trim()}\n\n## Answer\n\n${answer.trim()}\n`;
-}
-
 export async function runAsk(Question: string): Promise<string> {
     const config = defaultAgentConfig();
 
@@ -106,71 +96,3 @@ export async function runAsk(Question: string): Promise<string> {
     const result = await agent.generate({ prompt: Question.trim() });
     return result.text?.trim() || "No answer generated.";
 }
-
-export async function runAskMode() {
-    const apiKey = resolveApiKey();
-    if (!apiKey) {
-        showOnboardingError();
-        process.exit(0);
-    }
-
-    console.log(chalk.green("\n❓ Ask Mode\n"));
-    printVoiceBanner();
-
-    while (true) {
-        const Question = await promptWithVoice({
-            message: "What question do you have about this codebase?",
-            placeholder: "Ask anything about the codebase...",
-        });
-
-        if (!Question) return;
-
-        const answer = await runAsk(Question);
-
-        console.log("\n" + renderTerminalMarkdown(answer) + "\n");
-
-        const wantsSave = await confirm({
-            message: "save this answer  to  a .md file in the current directory ?",
-            initialValue: false,
-        });
-
-        if (isCancel(wantsSave) || !wantsSave) {
-            console.log(chalk.dim("\nAsk another question, or press Ctrl+C to return to the menu.\n"));
-            continue;
-        }
-
-        const filename = await text({
-            message: "Enter filename (relative to current directory)",
-            initialValue: "ask.md",
-            validate: (v) => {
-                const s = (v ?? '').trim();
-                if (!s) return 'Required';
-                if (s.includes('..') || s.includes('/') || s.includes('\\')) return 'No paths';
-                if (!s.toLowerCase().endsWith('.md')) return 'Must end with .md';
-            },
-        });
-        if (isCancel(filename)) continue;
-
-        const config = defaultAgentConfig();
-        config.tools.allowFileCreation = true;
-        config.tools.allowFileModification = false;
-        config.tools.allowShellExecution = false;
-        config.tools.allowFolderCreation = false;
-
-        const tracker = new actionTracker();
-        const executor = new ToolExecutor(tracker, config);
-
-        executor.createFile(filename, asMd(Question, answer));
-        const ok = await runApprovalFlow(tracker);
-        if (!ok) {
-            executor.clearStaging();
-            continue;
-        }
-
-        executor.applyApprovedFromTracker();
-        executor.clearStaging();
-        console.log(chalk.green("\n✅ Answer saved successfully.\n"));
-        console.log(chalk.dim("Ask another question, or press Ctrl+C to return to the menu.\n"));
-    }
-}
-
