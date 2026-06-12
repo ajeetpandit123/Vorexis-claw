@@ -19,7 +19,7 @@ export interface VorexisConfig {
   anthropicApiKey?: string;
   googleApiKey?: string;
   voiceEnabled?: boolean;
-  speechToTextProvider?: "whisper" | "deepgram" | "assemblyai" | "whisper.cpp";
+  speechToTextProvider?: "whisper" | "deepgram" | "assemblyai" | "whisper.cpp" | "browser";
   textToSpeechProvider?: "edge-tts" | "openai" | "elevenlabs" | "azure" | "none";
   voiceOutput?: boolean;
   autoListen?: boolean;

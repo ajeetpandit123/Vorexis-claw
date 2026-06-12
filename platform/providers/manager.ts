@@ -4,8 +4,8 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 
 import { loadConfig, resolveApiKey } from "../../config/config.ts";
-import { classifyTask, routeModel, type ModelRouteOptions } from "./model-router.ts";
-import type { ModelProvider } from "./types.ts";
+import { classifyTask, routeModel } from "./model-router.ts";
+import type { ModelProvider, ModelRouteOptions } from "./types.ts";
 
 export function getModelProvider(): ModelProvider {
   const config = loadConfig();

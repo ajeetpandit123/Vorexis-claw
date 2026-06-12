@@ -4,7 +4,7 @@ import { z } from "zod";
 import { mcpManager } from "./manager.ts";
 
 export function createMcpTools() {
-  const mcpTools: Record<string, ReturnType<typeof tool>> = {};
+  const mcpTools: Record<string, unknown> = {};
 
   const registered = mcpManager.getAllTools();
 
@@ -34,7 +34,7 @@ export function createMcpTools() {
     mcpTools[toolName] = tool({
       description: `[MCP:${server}] ${mcpTool.description ?? mcpTool.name}`,
       inputSchema: z.object(zodShape),
-      execute: async (args) => mcpManager.callTool(server, mcpTool.name, args as Record<string, unknown>),
+      execute: async (args: Record<string, unknown>) => mcpManager.callTool(server, mcpTool.name, args),
     });
   }
 

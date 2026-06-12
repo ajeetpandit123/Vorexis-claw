@@ -76,6 +76,7 @@ async function runChecks(): Promise<CheckResult[]> {
     });
   }
 
+  const githubCheckIndex = results.length;
   results.push({
     name: "GitHub Auth",
     ok: hasGitHubAuth(),
@@ -86,15 +87,18 @@ async function runChecks(): Promise<CheckResult[]> {
   if (hasGitHubAuth()) {
     try {
       const user = await getAuthenticatedUser();
-      results[results.length - 1] = {
+      results[githubCheckIndex] = {
         name: "GitHub Auth",
         ok: true,
         detail: `Authenticated as ${user.login}`,
       };
     } catch {
-      results[results.length - 1].ok = false;
-      results[results.length - 1].detail = "Token invalid";
-      results[results.length - 1].fix = "vorexis-claw github login";
+      const githubCheck = results[githubCheckIndex];
+      if (githubCheck) {
+        githubCheck.ok = false;
+        githubCheck.detail = "Token invalid";
+        githubCheck.fix = "vorexis-claw github login";
+      }
     }
   }
 

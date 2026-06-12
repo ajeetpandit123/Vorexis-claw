@@ -122,7 +122,9 @@ export function parseRepoFromRemote(): { owner: string; repo: string } | null {
       .trim();
     const match = url.match(/github\.com[:/]([^/]+)\/([^/.]+)/);
     if (!match) return null;
-    return { owner: match[1], repo: match[2].replace(/\.git$/, "") };
+    const [, owner, repo] = match;
+    if (!owner || !repo) return null;
+    return { owner, repo: repo.replace(/\.git$/, "") };
   } catch {
     return null;
   }
