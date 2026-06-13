@@ -12,6 +12,7 @@ import {
   listOllamaModels,
 } from "./providers/manager.ts";
 import { isVoiceEnabled } from "../modes/voice/prompt-input.ts";
+import { getSttReadiness } from "../modes/voice/stt-service.ts";
 
 interface CheckResult {
   name: string;
@@ -112,17 +113,22 @@ async function runChecks(): Promise<CheckResult[]> {
     fix: "vorexis-claw mcp connect <name>",
   });
 
+  const sttReady = getSttReadiness(config);
   results.push({
     name: "Voice Input",
-    ok: isVoiceEnabled(),
-    detail: isVoiceEnabled() ? `STT: ${config.speechToTextProvider ?? "whisper"}` : "Disabled",
+    ok: isVoiceEnabled() && sttReady.ok,
+    detail: isVoiceEnabled()
+      ? sttReady.ok
+        ? `STT: ${sttReady.provider}`
+        : sttReady.message ?? "STT not configured"
+      : "Disabled",
     fix: "vorexis-claw settings",
   });
 
   results.push({
     name: "Voice Output",
-    ok: config.voiceOutput !== false,
-    detail: config.voiceOutput !== false ? `TTS: ${config.textToSpeechProvider ?? "edge-tts"}` : "Disabled",
+    ok: config.voiceOutput === true,
+    detail: config.voiceOutput === true ? `TTS: ${config.textToSpeechProvider ?? "edge-tts"}` : "Disabled (default)",
     fix: "vorexis-claw settings",
   });
 

@@ -7,13 +7,13 @@ import { text, isCancel } from "@clack/prompts";
 
 import { loadConfig } from "../../config/config.ts";
 import { AudioRecorder } from "./audio-recorder.ts";
-import { SttService } from "./stt-service.ts";
+import { SttService, getSttReadiness } from "./stt-service.ts";
 import { friendlyVoiceError, isSilentRecording } from "./voice-errors.ts";
+import { getComposerModelLabel, printComposer } from "./composer-ui.ts";
 
 export interface PromptWithVoiceOptions {
-  message: string;
+  message?: string;
   placeholder?: string;
-  /** Skip header text on follow-up prompts in the session loop */
   continuation?: boolean;
 }
 
@@ -24,32 +24,61 @@ export function isVoiceEnabled(): boolean {
 
 export function printVoiceBanner(): void {
   if (!isVoiceEnabled()) return;
-  console.log(chalk.cyan("🎤 Voice Available"));
-  console.log(chalk.dim("V → Start recording · ENTER → Stop & submit · ESC → Cancel recording"));
+
+  const readiness = getSttReadiness();
+  if (readiness.ok) {
+    console.log(chalk.dim(`Composer · Tab → 🎤 voice · STT: ${readiness.provider}`));
+  } else {
+    console.log(chalk.yellow(`Voice STT: ${readiness.message}`));
+    console.log(chalk.dim("Type in composer · run: vorexis-claw settings"));
+  }
   console.log();
 }
 
-export async function promptWithVoice(
-  options: PromptWithVoiceOptions
-): Promise<string | null> {
-  if (!isVoiceEnabled()) {
-    const result = await text({
-      message: options.message,
-      placeholder: options.placeholder,
-    });
-    if (isCancel(result) || !result.trim()) return null;
-    return result.trim();
+function waitForRecordingStop(): Promise<boolean> {
+  return new Promise((resolve) => {
+    readline.emitKeypressEvents(process.stdin);
+    const wasRaw = process.stdin.isRaw;
+    process.stdin.setRawMode(true);
+    process.stdin.resume();
+
+    const cleanup = () => {
+      process.stdin.removeListener("keypress", onKeypress);
+      if (process.stdin.isTTY) {
+        process.stdin.setRawMode(wasRaw ?? false);
+      }
+    };
+
+    const onKeypress = (_str: string, key: readline.Key) => {
+      if (key.name === "return") {
+        cleanup();
+        resolve(true);
+        return;
+      }
+      if (key.name === "escape" || (key.ctrl && key.name === "c")) {
+        cleanup();
+        resolve(false);
+      }
+    };
+
+    process.stdin.on("keypress", onKeypress);
+  });
+}
+
+async function promptWithComposer(options: PromptWithVoiceOptions): Promise<string | null> {
+  const placeholder =
+    options.placeholder ??
+    (options.continuation
+      ? "Continue — plan, build, fix..."
+      : "Plan, Build, fix, understand, or plan...");
+
+  if (options.message) {
+    console.log(chalk.hex("#e8dcf8").bold(options.message));
+    console.log();
   }
 
-  if (!options.continuation) {
-    if (options.message) {
-      console.log(chalk.bold(options.message));
-    }
-    if (options.placeholder) {
-      console.log(chalk.dim(options.placeholder));
-    }
-  }
-  process.stdout.write(chalk.dim("> "));
+  printComposer({ placeholder, modelLabel: getComposerModelLabel() });
+  process.stdout.write(`${chalk.dim(">")} `);
 
   if (!process.stdin.isTTY) {
     const rl = readline.createInterface({ input: process.stdin, output: process.stdout });
@@ -60,10 +89,6 @@ export async function promptWithVoice(
       });
     });
   }
-
-  const recorder = new AudioRecorder();
-  const stt = new SttService();
-  const tempMicPath = path.join(os.tmpdir(), "vorexis_claw_mic.wav");
 
   let buffer = "";
   let isRecording = false;
@@ -87,78 +112,71 @@ export async function promptWithVoice(
       resolve(result);
     };
 
-    const cancelRecording = async () => {
-      if (!isRecording) return;
-      isRecording = false;
-      try {
-        await recorder.stop();
-      } catch {
-        // Ignore stop errors when cancelling
-      }
-      if (fs.existsSync(tempMicPath)) {
-        try {
-          fs.unlinkSync(tempMicPath);
-        } catch {
-          // Ignore cleanup errors
-        }
-      }
-      process.stdout.write(chalk.dim("\nRecording cancelled.\n> "));
-    };
-
     const startRecording = async () => {
       if (isRecording) return;
+
+      const readiness = getSttReadiness();
+      if (!readiness.ok) {
+        process.stdout.write(chalk.yellow(`\n${readiness.message}\n> `));
+        return;
+      }
+
       isRecording = true;
       buffer = "";
-      process.stdout.write(chalk.red("\n🎙 Recording... (ENTER to stop, ESC to cancel)\n"));
+      process.stdout.write(chalk.red("\n🎙 Recording… ENTER stop · ESC cancel\n"));
+
+      const tempMicPath = path.join(os.tmpdir(), "vorexis_claw_mic.wav");
+      const rec = new AudioRecorder();
+
       try {
-        await recorder.start({ outputPath: tempMicPath });
+        await rec.start({ outputPath: tempMicPath });
       } catch {
         isRecording = false;
-        process.stdout.write(chalk.yellow("\nCould not start recording. Try again or type your prompt.\n> "));
+        process.stdout.write(chalk.yellow("\nMic unavailable.\n> "));
+        return;
       }
-    };
 
-    const cleanupMicFile = () => {
-      if (fs.existsSync(tempMicPath)) {
-        try {
-          fs.unlinkSync(tempMicPath);
-        } catch {
-          // Ignore cleanup errors
-        }
-      }
-    };
-
-    const stopAndTranscribe = async (): Promise<string | null> => {
-      if (!isRecording) return null;
+      const stopped = await waitForRecordingStop();
       isRecording = false;
 
+      if (!stopped) {
+        try {
+          await rec.stop();
+        } catch {
+          // ignore
+        }
+        if (fs.existsSync(tempMicPath)) fs.unlinkSync(tempMicPath);
+        process.stdout.write(chalk.dim("\nCancelled.\n> "));
+        return;
+      }
+
       try {
-        await recorder.stop();
+        await rec.stop();
       } catch {
-        cleanupMicFile();
-        process.stdout.write(chalk.yellow("\nCould not process recording. Try again or type your prompt.\n> "));
-        return null;
+        process.stdout.write(chalk.yellow("\nRecording failed.\n> "));
+        return;
       }
 
       if (isSilentRecording(tempMicPath)) {
-        cleanupMicFile();
+        if (fs.existsSync(tempMicPath)) fs.unlinkSync(tempMicPath);
         process.stdout.write(chalk.dim("\nNo speech detected.\n> "));
-        return null;
+        return;
       }
 
-      process.stdout.write(chalk.yellow("Transcribing...\n"));
+      process.stdout.write(chalk.yellow("\nTranscribing... "));
       try {
+        const stt = new SttService();
         const transcript = (await stt.transcribe({ filePath: tempMicPath })).trim();
-        cleanupMicFile();
+        if (fs.existsSync(tempMicPath)) fs.unlinkSync(tempMicPath);
         if (!transcript) {
           process.stdout.write(chalk.dim("\nNo speech detected.\n> "));
-          return null;
+          return;
         }
-        return transcript;
+        console.log(chalk.hex("#e8dcf8")(`\n🎤 ${chalk.bold(transcript)}\n`));
+        finish(transcript);
       } catch (err: unknown) {
-        cleanupMicFile();
+        if (fs.existsSync(tempMicPath)) fs.unlinkSync(tempMicPath);
         process.stdout.write(chalk.yellow(`\n${friendlyVoiceError(err)}\n> `));
-        return null;
       }
     };
 
@@ -168,25 +186,9 @@ export async function promptWithVoice(
         return;
       }
 
-      if (key.name === "escape") {
-        if (isRecording) {
-          await cancelRecording();
-        }
-        return;
-      }
+      if (isRecording) return;
 
-      if (isRecording) {
-        if (key.name === "return") {
-          const transcript = await stopAndTranscribe();
-          if (transcript) {
-            console.log(chalk.hex("#e8dcf8")(`You said: ${chalk.bold(transcript)}`));
-            finish(transcript);
-          }
-        }
-        return;
-      }
-
-      if (key.name === "v" && buffer === "") {
+      if (key.name === "tab") {
         await startRecording();
         return;
       }
@@ -212,4 +214,25 @@ export async function promptWithVoice(
 
     process.stdin.on("keypress", onKeypress);
   });
+}
+
+export async function promptWithVoice(
+  options: PromptWithVoiceOptions = {}
+): Promise<string | null> {
+  if (!isVoiceEnabled()) {
+    const result = await text({
+      message: options.message || "What would you like to build, fix, understand, or plan?",
+      placeholder: options.placeholder,
+    });
+    if (isCancel(result) || !result.trim()) return null;
+    return result.trim();
+  }
+
+  const message =
+    options.message ||
+    (options.continuation
+      ? undefined
+      : "What would you like to build, fix, understand, or plan?");
+
+  return promptWithComposer({ ...options, message });
 }

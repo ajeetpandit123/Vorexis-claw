@@ -83,7 +83,7 @@ export async function runSession(): Promise<void> {
   while (true) {
     const input = await promptWithVoice({
       message: firstPrompt ? "" : chalk.dim("Continue..."),
-      placeholder: firstPrompt ? undefined : "Type or press V to speak",
+      placeholder: firstPrompt ? undefined : "Describe your next step...",
       continuation: !firstPrompt,
     });
 

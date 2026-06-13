@@ -53,8 +53,8 @@ export function loadConfig(): VorexisConfig {
     voiceEnabled: true,
     speechToTextProvider: "whisper",
     textToSpeechProvider: "edge-tts",
-    voiceOutput: true,
-    autoListen: true
+    voiceOutput: false,
+    autoListen: false
   };
   if (!fs.existsSync(configPath)) {
     return defaults;
@@ -178,15 +178,15 @@ export async function runSettingsFlow() {
     textToSpeechProvider = tts as any;
 
     const speak = await confirm({
-      message: "Speak AI responses aloud?",
-      initialValue: voiceOutput
+      message: "Speak AI responses aloud automatically?",
+      initialValue: voiceOutput ?? false
     });
     if (isCancel(speak)) return;
     voiceOutput = speak;
 
     const listen = await confirm({
-      message: "Enable continuous conversation loop?",
-      initialValue: currentConfig.autoListen ?? true
+      message: "Auto-reopen voice menu after each response?",
+      initialValue: currentConfig.autoListen ?? false
     });
     if (isCancel(listen)) return;
     autoListen = listen;

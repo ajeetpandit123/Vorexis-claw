@@ -417,6 +417,52 @@
     document.querySelectorAll("[data-docs-link]").forEach((el) => el.setAttribute("href", "#docs"));
   }
 
+  /* ── Composer mic demo (landing) ── */
+  function initComposerDemo() {
+    const micBtn = document.getElementById("composer-mic-btn");
+    const status = document.getElementById("composer-status");
+    const typed = document.getElementById("composer-typed");
+    if (!micBtn || !status) return;
+
+    let recording = false;
+    let timer = null;
+
+    micBtn.addEventListener("click", () => {
+      if (recording) {
+        recording = false;
+        micBtn.classList.remove("recording");
+        status.className = "composer-status success";
+        status.textContent = "✓ Transcribed: Build JWT authentication with refresh tokens";
+        if (typed) {
+          typed.textContent = "Build JWT authentication with refresh tokens";
+          typed.classList.remove("hidden");
+          document.getElementById("composer-placeholder")?.classList.add("hidden");
+        }
+        clearTimeout(timer);
+        return;
+      }
+
+      recording = true;
+      micBtn.classList.add("recording");
+      status.className = "composer-status recording";
+      status.textContent = "🎙 Recording… click mic again to stop & transcribe";
+
+      timer = setTimeout(() => {
+        if (recording) {
+          recording = false;
+          micBtn.classList.remove("recording");
+          status.className = "composer-status success";
+          status.textContent = "✓ Transcribed: Explain my project architecture";
+          if (typed) {
+            typed.textContent = "Explain my project architecture";
+            typed.classList.remove("hidden");
+            document.getElementById("composer-placeholder")?.classList.add("hidden");
+          }
+        }
+      }, 4000);
+    });
+  }
+
   /* ── Parallax orbs on mouse ── */
   function initHeroParallax() {
     const hero = document.getElementById("hero");
@@ -468,6 +514,7 @@
     initGitHubLinks();
     initHeroParallax();
     initCounters();
+    initComposerDemo();
   }
 
   if (document.readyState === "loading") {

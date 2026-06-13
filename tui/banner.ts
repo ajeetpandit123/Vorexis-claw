@@ -3,7 +3,7 @@ import boxen from "boxen";
 import gradient from "gradient-string";
 
 import { type ProjectContext } from "../core/project-context.ts";
-import { isVoiceEnabled } from "../modes/voice/prompt-input.ts";
+import { isVoiceEnabled, printVoiceBanner } from "../modes/voice/prompt-input.ts";
 
 export function printStartupBanner(project: ProjectContext): void {
   const title = gradient(["#5b4d9e", "#e8dcf8"]).multiline("⚡ VOREXIS CLAW");
@@ -30,13 +30,6 @@ export function printStartupBanner(project: ProjectContext): void {
   console.log();
 
   if (isVoiceEnabled()) {
-    console.log(chalk.cyan("🎤 Voice Available"));
-    console.log(chalk.dim("Type your prompt or press V to record"));
-    console.log();
+    printVoiceBanner();
   }
-
-  console.log(
-    chalk.hex("#e8dcf8").bold("What would you like to build, fix, understand, or plan?")
-  );
-  console.log();
 }

@@ -706,3 +706,97 @@ body {
     opacity: 1; transform: none; filter: none;
   }
 }
+
+/* ── Cursor-style composer (landing demo) ── */
+.composer-bar {
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid rgba(148, 163, 184, 0.12);
+  border-radius: 1rem;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(139, 92, 246, 0.08);
+}
+
+.composer-input-area {
+  padding: 1rem 1.25rem 0.75rem;
+  min-height: 72px;
+}
+
+.composer-placeholder {
+  color: #64748b;
+  font-size: 0.9375rem;
+  line-height: 1.5;
+}
+
+.composer-typed {
+  color: #e2e8f0;
+}
+
+.composer-footer {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.625rem 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.08);
+  background: rgba(5, 8, 22, 0.5);
+}
+
+.composer-agent-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.5rem;
+  background: rgba(30, 27, 75, 0.6);
+  border: 1px solid rgba(139, 92, 246, 0.2);
+  font-size: 0.75rem;
+  color: #cbd5e1;
+}
+
+.composer-mic-btn {
+  width: 2.25rem;
+  height: 2.25rem;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(51, 65, 85, 0.8);
+  border: 1px solid rgba(148, 163, 184, 0.15);
+  color: #94a3b8;
+  cursor: pointer;
+  transition: background 0.25s, border-color 0.25s, color 0.25s, box-shadow 0.25s, transform 0.2s;
+}
+
+.composer-mic-btn:hover {
+  background: rgba(124, 58, 237, 0.25);
+  border-color: rgba(139, 92, 246, 0.45);
+  color: #fff;
+}
+
+.composer-mic-btn.recording {
+  background: rgba(239, 68, 68, 0.2);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fca5a5;
+  box-shadow: 0 0 24px rgba(239, 68, 68, 0.25);
+  animation: mic-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes mic-pulse {
+  0%, 100% { transform: scale(1); }
+  50% { transform: scale(1.08); }
+}
+
+.composer-status {
+  font-size: 0.75rem;
+  color: #64748b;
+  margin-top: 0.75rem;
+  min-height: 1.25rem;
+}
+
+.composer-status.active { color: #a78bfa; }
+.composer-status.recording { color: #f87171; }
+.composer-status.success { color: #34d399; }
+
+/* Telegram section */
+.telegram-glow {
+  background: radial-gradient(ellipse 80% 60% at 50% 0%, rgba(38, 165, 228, 0.12), transparent 70%);
+}
